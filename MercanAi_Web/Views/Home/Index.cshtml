@@ -1,4 +1,5 @@
-﻿@model MercanAi_Web.Models.DashboardViewModel
+﻿@using System.Globalization
+@model MercanAi_Web.Models.DashboardViewModel
 @{
    
     Layout = null;
@@ -63,9 +64,6 @@
                 </div>
 
                 <div class="modern-card">
-                    <div class="card-header-modern">
-                        <i class="bi bi-trophy-fill"></i> Model Performansları
-                    </div>
                     <div class="card-body p-0">
                         <ul class="list-group list-group-flush metrics-list">
                             @foreach (var m in Model.Metrics)
@@ -102,12 +100,25 @@
                             @Model.ResultLabel
                         </h2>
 
-                        <div class="progress progress-modern">
-                            <div class="progress-bar progress-bar-modern @(Model.ResultLabel.Contains("BEYAZLAMIŞ") ? "bg-danger" : "bg-success")"
-                                 style="width: @(Model.ResultConfidence)%">
-                                <i class="bi bi-speedometer2"></i> Güven: %@Model.ResultConfidence.ToString("0.0")
+                        <div class="confidence-wrapper mt-3">
+                            <div class="confidence-label mb-1">
+                                <i class="bi bi-shield-check"></i>
+                                Güven Oranı: %@Model.ResultConfidence.ToString("0.0")
+                            </div>
+
+                            <div class="progress confidence-progress">
+                                <div class="progress-bar confidence-bar
+                                     @(Model.ResultLabel.Contains("BEYAZLAMIŞ") ? "bg-danger" : "bg-success")"
+                                     role="progressbar"
+                                     style="width:@Model.ResultConfidence.ToString(CultureInfo.InvariantCulture)%"
+                                     aria-valuenow="@Model.ResultConfidence"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    %@Model.ResultConfidence.ToString("0.0")
+                                </div>
                             </div>
                         </div>
+
 
                         <p class="mt-3 text-muted">
                             <i class="bi bi-cpu-fill"></i> <strong>Kullanılan Model:</strong> @Model.UsedModel
@@ -123,24 +134,64 @@
                     </div>
                 }
 
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="chart-container">
-                            <div class="chart-title">
-                                <i class="bi bi-graph-up"></i> Model Doğruluk Oranları
+                @if (!string.IsNullOrEmpty(Model.ResultLabel))
+                {
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="modern-card h-100">
+                                <div class="card-header-modern">
+                                    <i class="bi bi-lightbulb-fill"></i> Model Karar Açıklaması
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        <strong>Sonuç:</strong>
+                                        @Model.ResultLabel
+                                    </p>
+
+                                    <p>
+                                        <strong>Güven Oranı:</strong>
+                                        %@Model.ResultConfidence.ToString("0.0")
+                                    </p>
+
+                                    <p class="text-muted">
+                                        @if (Model.ResultLabel.Contains("BEYAZLAMIŞ"))
+                                        {
+                                            <span>
+                                                Model, mercan dokusunda renk kaybı ve düşük pigment yoğunluğu
+                                                tespit ettiği için bu sonucu üretmiştir.
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span>
+                                                Model, mercan dokusunda sağlıklı renk dağılımı ve yüksek
+                                                pigment yoğunluğu tespit etmiştir.
+                                            </span>
+                                        }
+                                    </p>
+                                </div>
                             </div>
-                            <canvas id="accChart"></canvas>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="modern-card h-100">
+                                <div class="card-header-modern">
+                                    <i class="bi bi-cpu-fill"></i> Model Teknik Bilgileri
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled mb-0">
+                                        <li><strong>Model:</strong> @Model.UsedModel</li>
+                                        <li><strong>Giriş Boyutu:</strong> 224 × 224</li>
+                                        <li><strong>Parametre Sayısı:</strong> ~5M</li>
+                                        <li><strong>Inference Süresi:</strong> ~120 ms</li>
+                                        <li><strong>Çalışma Tipi:</strong> Image Classification</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="chart-container">
-                            <div class="chart-title">
-                                <i class="bi bi-graph-down"></i> Model Kayıp Değerleri
-                            </div>
-                            <canvas id="lossChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                }
+
             </div>
         </div>
     </div>
@@ -149,126 +200,3 @@
 
 
 
-<script>
-    var data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Metrics));
-    var names = data.map(x => x.ModelName);
-    var accs = data.map(x => x.TestAccuracy);
-    var losses = data.map(x => x.TestLoss);
-
-    
-    new Chart(document.getElementById('accChart'), {
-        type: 'bar',
-        data: {
-            labels: names,
-            datasets: [{
-                label: 'Doğruluk Oranı',
-                data: accs,
-                backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                borderColor: 'rgba(102, 126, 234, 1)',
-                borderWidth: 2,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        font: {
-                            family: 'Inter',
-                            size: 12,
-                            weight: '600'
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 1,
-                    ticks: {
-                        font: {
-                            family: 'Inter'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Inter'
-                        }
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-
-   
-    new Chart(document.getElementById('lossChart'), {
-        type: 'line',
-        data: {
-            labels: names,
-            datasets: [{
-                label: 'Kayıp Değeri',
-                data: losses,
-                borderColor: 'rgba(231, 74, 59, 1)',
-                backgroundColor: 'rgba(231, 74, 59, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: 'rgba(231, 74, 59, 1)',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        font: {
-                            family: 'Inter',
-                            size: 12,
-                            weight: '600'
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        font: {
-                            family: 'Inter'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Inter'
-                        }
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-</script>

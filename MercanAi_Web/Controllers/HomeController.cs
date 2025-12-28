@@ -28,7 +28,7 @@ namespace MercanAI_Web.Controllers
         public IActionResult Analyze(IFormFile file, string selectedModel)
         {
             var viewModel = new DashboardViewModel();
-            viewModel.Metrics = LoadMetricsFromJson(); // Grafikler kaybolmasýn
+            viewModel.Metrics = LoadMetricsFromJson(); 
 
             if (file == null || file.Length == 0)
             {
